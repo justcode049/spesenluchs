@@ -91,6 +91,37 @@ export interface DayAllowance {
   is_arrival_departure: boolean;
 }
 
+export type VehicleType = "car" | "motorcycle" | "ebike";
+
+export const VEHICLE_RATES: Record<VehicleType, number> = {
+  car: 0.30,
+  motorcycle: 0.20,
+  ebike: 0.20,
+};
+
+export const VEHICLE_LABELS: Record<VehicleType, string> = {
+  car: "PKW (0,30 €/km)",
+  motorcycle: "Motorrad (0,20 €/km)",
+  ebike: "E-Bike (0,20 €/km)",
+};
+
+export interface Mileage {
+  id: string;
+  user_id: string;
+  trip_id: string | null;
+  date: string;
+  start_location: string;
+  end_location: string;
+  distance_km: number;
+  is_round_trip: boolean;
+  notes: string | null;
+  vehicle_type: VehicleType;
+  rate_per_km: number;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   display_name: string | null;

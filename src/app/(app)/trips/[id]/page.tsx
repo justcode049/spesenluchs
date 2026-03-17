@@ -33,6 +33,12 @@ export default async function TripDetailPage({
     .is("trip_id", null)
     .order("date", { ascending: true });
 
+  const { data: mileageEntries } = await supabase
+    .from("mileage")
+    .select("*")
+    .eq("trip_id", id)
+    .order("date", { ascending: true });
+
   const allowances = calculatePerDiems(
     trip.start_datetime,
     trip.end_datetime,
@@ -43,6 +49,9 @@ export default async function TripDetailPage({
   const totalAllowance = allowances.reduce((sum, d) => sum + d.net_allowance, 0);
   const totalReceipts = (receipts || []).reduce(
     (sum, r) => sum + (Number(r.total_amount) || 0), 0
+  );
+  const totalMileage = (mileageEntries || []).reduce(
+    (sum, m) => sum + (Number(m.total_amount) || 0), 0
   );
 
   const start = new Date(trip.start_datetime);
@@ -72,14 +81,18 @@ export default async function TripDetailPage({
       </div>
 
       {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">Tagespauschalen</p>
-          <p className="text-lg font-bold text-gray-900">{totalAllowance.toFixed(2)} EUR</p>
+          <p className="text-xs text-gray-500">Pauschalen</p>
+          <p className="text-lg font-bold text-gray-900">{totalAllowance.toFixed(2)} €</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Belege</p>
-          <p className="text-lg font-bold text-gray-900">{totalReceipts.toFixed(2)} EUR</p>
+          <p className="text-lg font-bold text-gray-900">{totalReceipts.toFixed(2)} €</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs text-gray-500">Fahrten</p>
+          <p className="text-lg font-bold text-gray-900">{totalMileage.toFixed(2)} €</p>
         </div>
       </div>
 
@@ -137,6 +150,50 @@ export default async function TripDetailPage({
         allowances={allowances}
         mealDeductions={trip.meal_deductions || []}
       />
+
+      {/* Mileage */}
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">
+            Fahrten ({(mileageEntries || []).length})
+          </h2>
+          <Link
+            href={`/mileage/new?trip=${id}`}
+            className="text-xs font-medium text-blue-600 hover:text-blue-500"
+          >
+            + Fahrt erfassen
+          </Link>
+        </div>
+        {(!mileageEntries || mileageEntries.length === 0) ? (
+          <div className="rounded-lg border-2 border-dashed border-gray-200 p-6 text-center">
+            <p className="text-xs text-gray-400">Noch keine Fahrten erfasst.</p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+            {mileageEntries.map((m) => {
+              const effectiveKm = m.is_round_trip
+                ? Number(m.distance_km) * 2
+                : Number(m.distance_km);
+              return (
+                <div key={m.id} className="flex items-center justify-between p-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {m.start_location} → {m.end_location}
+                      {m.is_round_trip && <span className="ml-1 text-xs text-gray-400">(H+R)</span>}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(m.date).toLocaleDateString("de-DE")} · {effectiveKm.toFixed(1)} km
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {Number(m.total_amount).toFixed(2)} €
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Linked Receipts */}
       <TripReceipts
