@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractReceipt } from "@/lib/extract-receipt";
+import { getExchangeRate, convertToEur } from "@/lib/exchange-rates";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,17 @@ export async function POST(request: NextRequest) {
     // Extract receipt data via Claude Vision
     const extraction = await extractReceipt(base64, mimeType);
 
-    return NextResponse.json({ extraction });
+    // If foreign currency, fetch exchange rate
+    let exchangeRate: number | null = null;
+    let eurAmount: number | null = null;
+    if (extraction.currency && extraction.currency !== "EUR" && extraction.total_amount) {
+      exchangeRate = await getExchangeRate(extraction.currency);
+      if (exchangeRate) {
+        eurAmount = convertToEur(extraction.total_amount, exchangeRate);
+      }
+    }
+
+    return NextResponse.json({ extraction, exchangeRate, eurAmount });
   } catch (error) {
     console.error("Extraction error:", error);
     return NextResponse.json(

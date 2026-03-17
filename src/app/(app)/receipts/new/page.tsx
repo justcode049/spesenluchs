@@ -16,6 +16,7 @@ export default function NewReceiptPage() {
   const [step, setStep] = useState<Step>("upload");
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [extraction, setExtraction] = useState<ReceiptExtraction | null>(null);
+  const [exchangeInfo, setExchangeInfo] = useState<{ rate: number; eurAmount: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -60,8 +61,11 @@ export default function NewReceiptPage() {
         throw new Error(data.error || "Extraktion fehlgeschlagen");
       }
 
-      const { extraction } = await response.json();
+      const { extraction, exchangeRate, eurAmount } = await response.json();
       setExtraction(extraction);
+      if (exchangeRate && eurAmount) {
+        setExchangeInfo({ rate: exchangeRate, eurAmount });
+      }
       setStep("review");
     } catch (err) {
       console.error(err);
@@ -156,12 +160,21 @@ export default function NewReceiptPage() {
       )}
 
       {step === "review" && extraction && (
-        <ReceiptReviewForm
-          extraction={extraction}
-          onConfirm={handleConfirm}
-          onDiscard={handleDiscard}
-          saving={saving}
-        />
+        <>
+          {exchangeInfo && (
+            <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+              Fremdwährung erkannt: {extraction.total_amount?.toFixed(2)} {extraction.currency}
+              {" = "}<strong>{exchangeInfo.eurAmount.toFixed(2)} EUR</strong>
+              {" "}(Kurs: 1 EUR = {exchangeInfo.rate.toFixed(4)} {extraction.currency})
+            </div>
+          )}
+          <ReceiptReviewForm
+            extraction={extraction}
+            onConfirm={handleConfirm}
+            onDiscard={handleDiscard}
+            saving={saving}
+          />
+        </>
       )}
 
       {step === "error" && (
