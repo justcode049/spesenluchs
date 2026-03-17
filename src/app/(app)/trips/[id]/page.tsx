@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { calculatePerDiems } from "@/lib/per-diem";
 import { MealDeductionToggles } from "./meal-toggles";
 import { TripReceipts } from "./trip-receipts";
+import { TripExport } from "./trip-export";
 
 export default async function TripDetailPage({
   params,
@@ -20,6 +21,12 @@ export default async function TripDetailPage({
     .single();
 
   if (!trip) notFound();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", trip.user_id)
+    .single();
 
   const { data: receipts } = await supabase
     .from("receipts")
@@ -200,6 +207,31 @@ export default async function TripDetailPage({
         tripId={trip.id}
         linkedReceipts={receipts || []}
         unlinkedReceipts={unlinkedReceipts || []}
+      />
+
+      {/* Export */}
+      <TripExport
+        trip={trip}
+        userName={profile?.display_name || ""}
+        allowances={allowances}
+        receipts={(receipts || []).map((r) => ({
+          date: r.date,
+          vendor_name: r.vendor_name,
+          total_amount: r.total_amount,
+          currency: r.currency,
+          receipt_type: r.receipt_type,
+          vendor_city: r.vendor_city,
+        }))}
+        mileage={(mileageEntries || []).map((m) => ({
+          date: m.date,
+          start_location: m.start_location,
+          end_location: m.end_location,
+          distance_km: Number(m.distance_km),
+          is_round_trip: m.is_round_trip,
+          vehicle_type: m.vehicle_type,
+          rate_per_km: Number(m.rate_per_km),
+          total_amount: Number(m.total_amount),
+        }))}
       />
     </div>
   );
