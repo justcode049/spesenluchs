@@ -80,6 +80,9 @@ export default function NewReceiptPage() {
     vat_positions: ReceiptExtraction["vat_positions"];
     confidence: ReceiptExtraction["confidence"];
     raw_extraction: ReceiptExtraction;
+    hospitality_occasion?: string;
+    hospitality_attendees?: string;
+    hospitality_tip?: number;
   }) {
     setSaving(true);
 
@@ -105,6 +108,9 @@ export default function NewReceiptPage() {
         vat_positions: data.vat_positions,
         confidence: data.confidence,
         raw_extraction: data.raw_extraction,
+        hospitality_occasion: data.hospitality_occasion || null,
+        hospitality_attendees: data.hospitality_attendees || null,
+        hospitality_tip: data.hospitality_tip || null,
         status: "confirmed",
       });
 

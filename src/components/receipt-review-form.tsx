@@ -28,6 +28,9 @@ interface ReceiptReviewFormProps {
     vat_positions: ReceiptExtraction["vat_positions"];
     confidence: ReceiptExtraction["confidence"];
     raw_extraction: ReceiptExtraction;
+    hospitality_occasion?: string;
+    hospitality_attendees?: string;
+    hospitality_tip?: number;
   }) => void;
   onDiscard: () => void;
   saving?: boolean;
@@ -49,6 +52,11 @@ export function ReceiptReviewForm({
   const [receiptType, setReceiptType] = useState<ReceiptType>(
     extraction.receipt_type || "other"
   );
+  const [hospitalityOccasion, setHospitalityOccasion] = useState("");
+  const [hospitalityAttendees, setHospitalityAttendees] = useState("");
+  const [hospitalityTip, setHospitalityTip] = useState("");
+
+  const isRestaurant = receiptType === "restaurant";
 
   const inputClass =
     "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -71,6 +79,11 @@ export function ReceiptReviewForm({
       vat_positions: extraction.vat_positions,
       confidence: extraction.confidence,
       raw_extraction: extraction,
+      ...(isRestaurant && {
+        hospitality_occasion: hospitalityOccasion || undefined,
+        hospitality_attendees: hospitalityAttendees || undefined,
+        hospitality_tip: hospitalityTip ? parseFloat(hospitalityTip) : undefined,
+      }),
     });
   }
 
@@ -169,6 +182,52 @@ export function ReceiptReviewForm({
           ))}
         </select>
       </ConfidenceField>
+
+      {/* Bewirtungsbeleg-Felder */}
+      {isRestaurant && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-orange-700">
+            Bewirtungsbeleg (steuerlich: 70% absetzbar)
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Anlass der Bewirtung
+            </label>
+            <input
+              type="text"
+              value={hospitalityOccasion}
+              onChange={(e) => setHospitalityOccasion(e.target.value)}
+              className={inputClass}
+              placeholder="z.B. Geschäftsessen mit Kunde XY"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Teilnehmer (Name, Firma)
+            </label>
+            <textarea
+              value={hospitalityAttendees}
+              onChange={(e) => setHospitalityAttendees(e.target.value)}
+              className={inputClass + " resize-none"}
+              rows={2}
+              placeholder="z.B. Max Müller, Firma ABC&#10;Anna Schmidt, Firma XYZ"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Trinkgeld
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={hospitalityTip}
+              onChange={(e) => setHospitalityTip(e.target.value)}
+              className={inputClass}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      )}
 
       {extraction.vat_positions.length > 0 && (
         <div>
