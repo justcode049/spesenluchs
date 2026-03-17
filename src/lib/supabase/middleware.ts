@@ -29,30 +29,8 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Redirect unauthenticated users to login (except auth pages and API routes)
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register") ||
-    request.nextUrl.pathname.startsWith("/callback");
-  const isApiRoute = request.nextUrl.pathname.startsWith("/api");
-  const isRootPage = request.nextUrl.pathname === "/";
-
-  if (!user && !isAuthPage && !isApiRoute && !isRootPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // Refresh the session - this is the only purpose of the middleware
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }
