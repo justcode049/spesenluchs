@@ -51,8 +51,44 @@ export interface Receipt {
   confidence: ConfidenceScores;
   raw_extraction: ReceiptExtraction | null;
   status: ReceiptStatus;
+  trip_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface MealDeduction {
+  date: string;
+  breakfast: boolean;
+  lunch: boolean;
+  dinner: boolean;
+}
+
+export type TripStatus = "draft" | "confirmed";
+
+export interface Trip {
+  id: string;
+  user_id: string;
+  title: string | null;
+  purpose: string | null;
+  destination: string;
+  country: string;
+  start_datetime: string;
+  end_datetime: string;
+  meal_deductions: MealDeduction[];
+  status: TripStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DayAllowance {
+  date: string;
+  hours: number;
+  base_allowance: number;
+  breakfast_deduction: number;
+  lunch_deduction: number;
+  dinner_deduction: number;
+  net_allowance: number;
+  is_arrival_departure: boolean;
 }
 
 export interface Profile {
