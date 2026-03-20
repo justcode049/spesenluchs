@@ -10,6 +10,7 @@ Regeln:
 - Datumsformat: YYYY-MM-DD (ISO)
 - Beträge als Zahlen (nicht als Strings), in der Währung des Belegs
 - Identifiziere ALLE MwSt-Positionen separat (7% und 19% sind üblich in Deutschland)
+- WICHTIG: "rate" MUSS als Dezimalzahl angegeben werden (z.B. 0.19 für 19%, 0.07 für 7%)
 - Klassifiziere den Belegtyp: hotel, restaurant, taxi, public_transport, gas_station, parking, train, flight, other
 - Gib Konfidenz-Scores (0-100) für jedes Feld an
 - Wenn ein Feld unleserlich oder nicht vorhanden ist, setze es auf null mit Konfidenz 0
@@ -21,7 +22,7 @@ Antworte NUR mit validem JSON, ohne Markdown-Formatierung, ohne Code-Blocks. Das
   "date": "YYYY-MM-DD" | null,
   "total_amount": number | null,
   "currency": "EUR" | string,
-  "vat_positions": [{"rate": number, "net": number, "vat": number, "gross": number}],
+  "vat_positions": [{"rate": 0.19, "net": number, "vat": number, "gross": number}],
   "vendor_name": string | null,
   "vendor_city": string | null,
   "receipt_type": "hotel"|"restaurant"|"taxi"|"public_transport"|"gas_station"|"parking"|"train"|"flight"|"other",
@@ -89,5 +90,14 @@ export async function extractReceipt(
   }
 
   const extraction: ReceiptExtraction = JSON.parse(jsonStr);
+
+  // Normalize VAT rates: if rate > 1, assume it's a percentage (e.g. 19 → 0.19)
+  if (extraction.vat_positions) {
+    extraction.vat_positions = extraction.vat_positions.map((vat) => ({
+      ...vat,
+      rate: vat.rate > 1 ? vat.rate / 100 : vat.rate,
+    }));
+  }
+
   return extraction;
 }

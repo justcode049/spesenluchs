@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { getSupportedCountries } from "@/lib/per-diem";
+import { useOrg } from "@/lib/org-context";
 
 const countries = getSupportedCountries();
 
 export default function NewTripPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { org } = useOrg();
   const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -57,6 +59,7 @@ export default function NewTripPage() {
           end_datetime: endDatetime,
           meal_deductions: [],
           status: "draft",
+          organization_id: org?.id || null,
         })
         .select("id")
         .single();

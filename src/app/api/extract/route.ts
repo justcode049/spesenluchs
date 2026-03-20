@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractReceipt } from "@/lib/extract-receipt";
 import { getExchangeRate, convertToEur } from "@/lib/exchange-rates";
+import { recognizeTrip } from "@/lib/trip-recognition";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +64,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ extraction, exchangeRate, eurAmount });
+    // Trip recognition
+    let tripAssignment = null;
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("city, primary_workplace")
+        .eq("id", user.id)
+        .single();
+
+      const { data: existingTrips } = await supabase
+        .from("trips")
+        .select("id, destination, start_datetime, end_datetime")
+        .eq("user_id", user.id)
+        .in("status", ["draft", "confirmed"]);
+
+      if (profile) {
+        tripAssignment = await recognizeTrip(
+          {
+            date: extraction.date,
+            vendor_city: extraction.vendor_city,
+            receipt_type: extraction.receipt_type,
+          },
+          {
+            city: profile.city,
+            primary_workplace: profile.primary_workplace,
+          },
+          existingTrips || []
+        );
+      }
+    } catch {
+      // Trip recognition is best-effort, don't fail the extraction
+    }
+
+    return NextResponse.json({ extraction, exchangeRate, eurAmount, tripAssignment });
   } catch (error) {
     console.error("Extraction error:", error);
     return NextResponse.json(

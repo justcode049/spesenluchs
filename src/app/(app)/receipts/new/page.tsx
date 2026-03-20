@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ReceiptExtraction, ReceiptType } from "@/lib/types";
+import { ReceiptExtraction, ReceiptType, TripAssignment } from "@/lib/types";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { ReceiptReviewForm } from "@/components/receipt-review-form";
 import { useToast } from "@/components/toast";
@@ -17,6 +17,7 @@ export default function NewReceiptPage() {
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [extraction, setExtraction] = useState<ReceiptExtraction | null>(null);
   const [exchangeInfo, setExchangeInfo] = useState<{ rate: number; eurAmount: number } | null>(null);
+  const [tripAssignment, setTripAssignment] = useState<TripAssignment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -61,10 +62,13 @@ export default function NewReceiptPage() {
         throw new Error(data.error || "Extraktion fehlgeschlagen");
       }
 
-      const { extraction, exchangeRate, eurAmount } = await response.json();
+      const { extraction, exchangeRate, eurAmount, tripAssignment: ta } = await response.json();
       setExtraction(extraction);
       if (exchangeRate && eurAmount) {
         setExchangeInfo({ rate: exchangeRate, eurAmount });
+      }
+      if (ta) {
+        setTripAssignment(ta);
       }
       setStep("review");
     } catch (err) {
@@ -87,6 +91,7 @@ export default function NewReceiptPage() {
     hospitality_occasion?: string;
     hospitality_attendees?: string;
     hospitality_tip?: number;
+    trip_id?: string;
   }) {
     setSaving(true);
 
@@ -115,6 +120,7 @@ export default function NewReceiptPage() {
         hospitality_occasion: data.hospitality_occasion || null,
         hospitality_attendees: data.hospitality_attendees || null,
         hospitality_tip: data.hospitality_tip || null,
+        trip_id: data.trip_id || null,
         status: "confirmed",
       });
 
@@ -170,6 +176,7 @@ export default function NewReceiptPage() {
           )}
           <ReceiptReviewForm
             extraction={extraction}
+            tripAssignment={tripAssignment}
             onConfirm={handleConfirm}
             onDiscard={handleDiscard}
             saving={saving}

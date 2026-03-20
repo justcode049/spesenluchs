@@ -6,7 +6,8 @@ VALUES (
   false,
   20971520, -- 20MB
   ARRAY['image/jpeg', 'image/png', 'image/heic', 'application/pdf']
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Users can upload to their own folder
 CREATE POLICY "Users upload to own folder"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ReceiptExtraction, ReceiptType } from "@/lib/types";
+import { ReceiptExtraction, ReceiptType, TripAssignment } from "@/lib/types";
 import { ConfidenceField } from "./confidence-field";
 
 const RECEIPT_TYPES: { value: ReceiptType; label: string }[] = [
@@ -18,6 +18,7 @@ const RECEIPT_TYPES: { value: ReceiptType; label: string }[] = [
 
 interface ReceiptReviewFormProps {
   extraction: ReceiptExtraction;
+  tripAssignment?: TripAssignment | null;
   onConfirm: (data: {
     date: string;
     total_amount: number;
@@ -31,6 +32,7 @@ interface ReceiptReviewFormProps {
     hospitality_occasion?: string;
     hospitality_attendees?: string;
     hospitality_tip?: number;
+    trip_id?: string;
   }) => void;
   onDiscard: () => void;
   saving?: boolean;
@@ -38,6 +40,7 @@ interface ReceiptReviewFormProps {
 
 export function ReceiptReviewForm({
   extraction,
+  tripAssignment,
   onConfirm,
   onDiscard,
   saving,
@@ -84,6 +87,9 @@ export function ReceiptReviewForm({
         hospitality_attendees: hospitalityAttendees || undefined,
         hospitality_tip: hospitalityTip ? parseFloat(hospitalityTip) : undefined,
       }),
+      ...(tripAssignment?.type === "existing" && tripAssignment.tripId
+        ? { trip_id: tripAssignment.tripId }
+        : {}),
     });
   }
 
@@ -229,6 +235,30 @@ export function ReceiptReviewForm({
         </div>
       )}
 
+      {/* Trip Assignment Banner */}
+      {tripAssignment && tripAssignment.type !== "none" && (
+        <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
+          {tripAssignment.type === "existing" && tripAssignment.tripId && (
+            <p className="text-sm text-purple-700">
+              Automatisch einer bestehenden Reise zugeordnet
+              <span className="ml-1 text-xs text-purple-500">
+                (Konfidenz: {Math.round(tripAssignment.confidence * 100)}%)
+              </span>
+            </p>
+          )}
+          {tripAssignment.type === "new_draft" && tripAssignment.suggestedTrip && (
+            <div>
+              <p className="text-sm font-medium text-purple-700">
+                Neue Reise erkannt
+              </p>
+              <p className="text-xs text-purple-600">
+                {tripAssignment.suggestedTrip.destination} ({tripAssignment.suggestedTrip.dates})
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {extraction.vat_positions.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -237,7 +267,7 @@ export function ReceiptReviewForm({
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-1">
             {extraction.vat_positions.map((vat, i) => (
               <div key={i} className="flex justify-between text-sm text-gray-600">
-                <span>{(vat.rate * 100).toFixed(0)}% MwSt</span>
+                <span>{(vat.rate > 1 ? vat.rate : vat.rate * 100).toFixed(0)}% MwSt</span>
                 <span>
                   Netto {vat.net.toFixed(2)} + {vat.vat.toFixed(2)} MwSt ={" "}
                   {vat.gross.toFixed(2)} {currency}

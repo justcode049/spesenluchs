@@ -5,6 +5,7 @@ import { calculatePerDiems } from "@/lib/per-diem";
 import { MealDeductionToggles } from "./meal-toggles";
 import { TripReceipts } from "./trip-receipts";
 import { TripExport } from "./trip-export";
+import { TripApprovalActions } from "./trip-approval-actions";
 
 export default async function TripDetailPage({
   params,
@@ -22,6 +23,8 @@ export default async function TripDetailPage({
 
   if (!trip) notFound();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("display_name")
@@ -38,6 +41,7 @@ export default async function TripDetailPage({
     .from("receipts")
     .select("*")
     .is("trip_id", null)
+    .eq("user_id", trip.user_id)
     .order("date", { ascending: true });
 
   const { data: mileageEntries } = await supabase
@@ -45,6 +49,20 @@ export default async function TripDetailPage({
     .select("*")
     .eq("trip_id", id)
     .order("date", { ascending: true });
+
+  // Check if current user is manager/admin in this org
+  let isReviewer = false;
+  if (trip.organization_id && user) {
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("role")
+      .eq("organization_id", trip.organization_id)
+      .eq("user_id", user.id)
+      .single();
+    isReviewer = !!membership && ["manager", "admin"].includes(membership.role);
+  }
+
+  const isOwner = user?.id === trip.user_id;
 
   const allowances = calculatePerDiems(
     trip.start_datetime,
@@ -64,6 +82,22 @@ export default async function TripDetailPage({
   const start = new Date(trip.start_datetime);
   const end = new Date(trip.end_datetime);
 
+  const statusLabels: Record<string, string> = {
+    draft: "Entwurf",
+    submitted: "Eingereicht",
+    approved: "Genehmigt",
+    rejected: "Abgelehnt",
+    confirmed: "Bestätigt",
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-gray-100 text-gray-600",
+    submitted: "bg-yellow-100 text-yellow-700",
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+    confirmed: "bg-blue-100 text-blue-700",
+  };
+
   return (
     <div>
       <div className="mb-4">
@@ -74,9 +108,18 @@ export default async function TripDetailPage({
 
       {/* Trip Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">
-          {trip.title || trip.destination}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-gray-900">
+            {trip.title || trip.destination}
+          </h1>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              statusColors[trip.status] || "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {statusLabels[trip.status] || trip.status}
+          </span>
+        </div>
         <p className="text-sm text-gray-500">
           {start.toLocaleDateString("de-DE")} – {end.toLocaleDateString("de-DE")}
           {" · "}{trip.destination}
@@ -86,6 +129,40 @@ export default async function TripDetailPage({
           <p className="mt-1 text-sm text-gray-400">{trip.purpose}</p>
         )}
       </div>
+
+      {/* Rejection Banner */}
+      {trip.status === "rejected" && trip.rejection_comment && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-medium text-red-700">Abgelehnt</p>
+          <p className="mt-1 text-sm text-red-600">{trip.rejection_comment}</p>
+          {trip.reviewed_at && (
+            <p className="mt-1 text-xs text-red-400">
+              {new Date(trip.reviewed_at).toLocaleDateString("de-DE")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Approval Info Banner */}
+      {trip.status === "approved" && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+          <p className="text-sm font-medium text-green-700">Genehmigt</p>
+          {trip.reviewed_at && (
+            <p className="mt-1 text-xs text-green-600">
+              am {new Date(trip.reviewed_at).toLocaleDateString("de-DE")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Lock Banner */}
+      {trip.locked_at && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs text-amber-700">
+            Gesperrt (GoBD) seit {new Date(trip.locked_at).toLocaleDateString("de-DE")}
+          </p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="mb-6 grid grid-cols-3 gap-3">
@@ -102,6 +179,15 @@ export default async function TripDetailPage({
           <p className="text-lg font-bold text-gray-900">{totalMileage.toFixed(2)} €</p>
         </div>
       </div>
+
+      {/* Approval Actions */}
+      <TripApprovalActions
+        tripId={trip.id}
+        status={trip.status}
+        isOwner={isOwner}
+        isReviewer={isReviewer}
+        hasOrg={!!trip.organization_id}
+      />
 
       {/* Per Diem Breakdown */}
       <div className="mb-6">
@@ -164,12 +250,14 @@ export default async function TripDetailPage({
           <h2 className="text-sm font-semibold text-gray-700">
             Fahrten ({(mileageEntries || []).length})
           </h2>
-          <Link
-            href={`/mileage/new?trip=${id}`}
-            className="text-xs font-medium text-blue-600 hover:text-blue-500"
-          >
-            + Fahrt erfassen
-          </Link>
+          {isOwner && !trip.locked_at && (
+            <Link
+              href={`/mileage/new?trip=${id}`}
+              className="text-xs font-medium text-blue-600 hover:text-blue-500"
+            >
+              + Fahrt erfassen
+            </Link>
+          )}
         </div>
         {(!mileageEntries || mileageEntries.length === 0) ? (
           <div className="rounded-lg border-2 border-dashed border-gray-200 p-6 text-center">

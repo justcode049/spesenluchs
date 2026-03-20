@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { VEHICLE_LABELS, VehicleType } from "@/lib/types";
+import { useOrg } from "@/lib/org-context";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { memberships, switchOrg, org } = useOrg();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -192,6 +195,87 @@ export default function ProfilePage() {
           {saving ? "Speichern..." : "Profil speichern"}
         </button>
       </form>
+
+      {/* Organisationen */}
+      <h2 className="mt-8 text-sm font-semibold text-gray-700">Organisationen</h2>
+
+      {memberships.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {memberships.map((m) => (
+            <div
+              key={m.organization.id}
+              className={`flex items-center justify-between rounded-lg border p-3 ${
+                org?.id === m.organization.id
+                  ? "border-blue-300 bg-blue-50"
+                  : "border-gray-200 bg-white"
+              }`}
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-900">{m.organization.name}</p>
+                <p className="text-xs text-gray-500">{m.role}</p>
+              </div>
+              <div className="flex gap-2">
+                {org?.id === m.organization.id ? (
+                  <button
+                    onClick={() => switchOrg(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Deaktivieren
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => switchOrg(m.organization.id)}
+                    className="text-xs text-blue-600 hover:text-blue-500"
+                  >
+                    Aktivieren
+                  </button>
+                )}
+                <Link
+                  href={`/org/${m.organization.slug}/settings`}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Verwalten
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-gray-500">Du bist noch keiner Organisation zugeordnet.</p>
+      )}
+
+      <Link
+        href="/org/new"
+        className="mt-3 inline-block text-sm font-medium text-blue-600 hover:text-blue-500"
+      >
+        + Organisation erstellen
+      </Link>
+
+      {/* DSGVO */}
+      <h2 className="mt-8 text-sm font-semibold text-gray-700">Datenschutz (DSGVO)</h2>
+
+      <div className="mt-3 flex gap-3">
+        <a
+          href="/api/account/export"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Daten exportieren
+        </a>
+        <button
+          onClick={async () => {
+            if (!confirm("Alle Daten unwiderruflich löschen? Diese Aktion kann nicht rückgängig gemacht werden.")) return;
+            const res = await fetch("/api/account/delete", { method: "POST" });
+            if (res.ok) {
+              router.push("/login");
+            } else {
+              showToast("Fehler beim Löschen", "error");
+            }
+          }}
+          className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          Account löschen
+        </button>
+      </div>
 
       <hr className="my-8 border-gray-200" />
 

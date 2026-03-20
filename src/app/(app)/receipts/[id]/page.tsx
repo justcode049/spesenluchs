@@ -94,7 +94,7 @@ export default async function ReceiptDetailPage({
                       i: number
                     ) => (
                       <p key={i} className="text-sm text-gray-700">
-                        {(vat.rate * 100).toFixed(0)}%: {vat.net.toFixed(2)} netto
+                        {(vat.rate > 1 ? vat.rate : vat.rate * 100).toFixed(0)}%: {vat.net.toFixed(2)} netto
                         + {vat.vat.toFixed(2)} MwSt = {vat.gross.toFixed(2)}{" "}
                         {receipt.currency || "EUR"}
                       </p>
