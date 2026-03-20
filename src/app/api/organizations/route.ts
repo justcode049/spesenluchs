@@ -49,25 +49,32 @@ export async function POST(request: NextRequest) {
       .replace(/^-|-$/g, "")
       + "-" + Math.random().toString(36).slice(2, 6);
 
+    const orgId = crypto.randomUUID();
+
     // Create organization
-    const { data: org, error: orgError } = await supabase
+    const { error: orgError } = await supabase
       .from("organizations")
-      .insert({ name, slug })
-      .select()
-      .single();
+      .insert({ id: orgId, name, slug });
 
     if (orgError) throw new Error(orgError.message);
 
-    // Add creator as admin
+    // Add creator as admin (must happen before SELECT due to RLS)
     const { error: memberError } = await supabase
       .from("memberships")
       .insert({
         user_id: user.id,
-        organization_id: org.id,
+        organization_id: orgId,
         role: "admin",
       });
 
     if (memberError) throw new Error(memberError.message);
+
+    // Now user has membership, so SELECT policy allows reading
+    const { data: org } = await supabase
+      .from("organizations")
+      .select()
+      .eq("id", orgId)
+      .single();
 
     return NextResponse.json({ organization: org });
   } catch (error) {
