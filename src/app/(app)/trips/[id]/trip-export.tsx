@@ -5,6 +5,7 @@ import { DayAllowance } from "@/lib/types";
 import { useToast } from "@/components/toast";
 
 interface TripExportProps {
+  tripId: string;
   trip: {
     title: string | null;
     destination: string;
@@ -34,6 +35,7 @@ interface TripExportProps {
 }
 
 export function TripExport({
+  tripId,
   trip,
   userName,
   allowances,
@@ -42,6 +44,7 @@ export function TripExport({
 }: TripExportProps) {
   const { showToast } = useToast();
   const [exporting, setExporting] = useState(false);
+  const [exportingDatev, setExportingDatev] = useState(false);
 
   const exportData = {
     title: trip.title || trip.destination,
@@ -87,6 +90,37 @@ export function TripExport({
     }
   }
 
+  async function handleDatevExport() {
+    setExportingDatev(true);
+    try {
+      const res = await fetch("/api/export/datev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Export fehlgeschlagen");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition");
+      const filename = disposition?.match(/filename="(.+)"/)?.[1] || `DATEV_Export.zip`;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("DATEV-Export erstellt!");
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof Error ? err.message : "DATEV-Export fehlgeschlagen.", "error");
+    }
+    setExportingDatev(false);
+  }
+
   return (
     <div className="mb-6">
       <h2 className="mb-3 text-sm font-semibold text-gray-700">Export</h2>
@@ -103,6 +137,13 @@ export function TripExport({
           className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           CSV Export
+        </button>
+        <button
+          onClick={handleDatevExport}
+          disabled={exportingDatev}
+          className="flex-1 rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+        >
+          {exportingDatev ? "Wird erstellt..." : "DATEV Export"}
         </button>
       </div>
     </div>

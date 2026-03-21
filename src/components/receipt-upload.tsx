@@ -8,10 +8,17 @@ interface ReceiptUploadProps {
 }
 
 export function ReceiptUpload({ onFileSelected, loading }: ReceiptUploadProps) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPdf, setIsPdf] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device on mount
+  if (typeof window !== "undefined" && !isMobile && navigator.maxTouchPoints > 0) {
+    setIsMobile(true);
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -48,20 +55,50 @@ export function ReceiptUpload({ onFileSelected, loading }: ReceiptUploadProps) {
   return (
     <div className="space-y-4">
       {!preview ? (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={loading}
-          className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 hover:border-blue-400 hover:bg-blue-50 transition-colors"
-        >
-          <CameraIcon className="mb-3 h-10 w-10 text-gray-400" />
-          <span className="text-sm font-medium text-gray-700">
-            Beleg fotografieren oder hochladen
-          </span>
-          <span className="mt-1 text-xs text-gray-500">
-            JPG, PNG, HEIC oder PDF (max. 20 MB)
-          </span>
-        </button>
+        isMobile ? (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={loading}
+              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            >
+              <CameraIcon className="mb-2 h-8 w-8 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">
+                Foto aufnehmen
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            >
+              <FolderIcon className="mb-2 h-8 w-8 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">
+                Aus Galerie / Datei
+              </span>
+            </button>
+            <p className="col-span-2 text-center text-xs text-gray-500">
+              JPG, PNG, HEIC oder PDF (max. 20 MB)
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          >
+            <CameraIcon className="mb-3 h-10 w-10 text-gray-400" />
+            <span className="text-sm font-medium text-gray-700">
+              Beleg fotografieren oder hochladen
+            </span>
+            <span className="mt-1 text-xs text-gray-500">
+              JPG, PNG, HEIC oder PDF (max. 20 MB)
+            </span>
+          </button>
+        )
       ) : (
         <div className="relative">
           {isPdf ? (
@@ -87,6 +124,7 @@ export function ReceiptUpload({ onFileSelected, loading }: ReceiptUploadProps) {
               setPreview(null);
               setSelectedFile(null);
               setIsPdf(false);
+              if (cameraInputRef.current) cameraInputRef.current.value = "";
               if (fileInputRef.current) fileInputRef.current.value = "";
             }}
             className="absolute top-2 right-2 rounded-full bg-white p-1.5 shadow-md hover:bg-gray-100"
@@ -97,10 +135,17 @@ export function ReceiptUpload({ onFileSelected, loading }: ReceiptUploadProps) {
       )}
 
       <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/heic"
+        capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/heic,application/pdf"
-        capture="environment"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -131,6 +176,14 @@ function CameraIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+    </svg>
+  );
+}
+
+function FolderIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
     </svg>
   );
 }

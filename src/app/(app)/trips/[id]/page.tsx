@@ -299,6 +299,7 @@ export default async function TripDetailPage({
 
       {/* Export */}
       <TripExport
+        tripId={trip.id}
         trip={trip}
         userName={profile?.display_name || ""}
         allowances={allowances}
