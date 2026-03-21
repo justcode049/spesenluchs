@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ReceiptExtraction, ReceiptType, TripAssignment } from "@/lib/types";
+import { ReceiptExtraction, ReceiptType, TripAssignment, formatVatRate } from "@/lib/types";
 import { ConfidenceField } from "./confidence-field";
 
 const RECEIPT_TYPES: { value: ReceiptType; label: string }[] = [
@@ -267,7 +267,7 @@ export function ReceiptReviewForm({
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-1">
             {extraction.vat_positions.map((vat, i) => (
               <div key={i} className="flex justify-between text-sm text-gray-600">
-                <span>{(vat.rate > 1 ? vat.rate : vat.rate * 100).toFixed(0)}% MwSt</span>
+                <span>{formatVatRate(vat.rate)} MwSt</span>
                 <span>
                   Netto {vat.net.toFixed(2)} + {vat.vat.toFixed(2)} MwSt ={" "}
                   {vat.gross.toFixed(2)} {currency}

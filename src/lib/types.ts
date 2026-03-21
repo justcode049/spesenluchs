@@ -5,6 +5,13 @@ export interface VatPosition {
   gross: number;
 }
 
+/** Normalize VAT rate to integer percentage (e.g. 0.19 → 19, 19 → 19, 1900 → 19) */
+export function formatVatRate(rate: number): string {
+  if (rate > 100) rate = rate / 100;
+  if (rate <= 1) rate = rate * 100;
+  return `${Math.round(rate)}%`;
+}
+
 export interface ConfidenceScores {
   date: number;
   total_amount: number;

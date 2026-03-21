@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ReceiptImage } from "./receipt-image";
+import { formatVatRate } from "@/lib/types";
 
 export default async function ReceiptDetailPage({
   params,
@@ -94,7 +95,7 @@ export default async function ReceiptDetailPage({
                       i: number
                     ) => (
                       <p key={i} className="text-sm text-gray-700">
-                        {(vat.rate > 1 ? vat.rate : vat.rate * 100).toFixed(0)}%: {vat.net.toFixed(2)} netto
+                        {formatVatRate(vat.rate)}: {vat.net.toFixed(2)} netto
                         + {vat.vat.toFixed(2)} MwSt = {vat.gross.toFixed(2)}{" "}
                         {receipt.currency || "EUR"}
                       </p>

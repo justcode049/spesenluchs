@@ -51,10 +51,16 @@ const RECEIPT_TYPE_ACCOUNTS: Record<string, { account: string; label: string }> 
 
 const COUNTER_ACCOUNT = "1590"; // Durchlaufende Posten / Verrechnungskonto
 
-// USt-Schlüssel DATEV
+// USt-Schlüssel DATEV – handles rate as 0.19, 19, or 1900
 function vatCode(rate: number): string {
-  if (rate === 0.19 || rate === 19) return "9"; // 19% USt
-  if (rate === 0.07 || rate === 7) return "8"; // 7% USt
+  // Normalize to integer percentage
+  let pct = rate;
+  if (pct > 100) pct = pct / 100;
+  if (pct <= 1) pct = pct * 100;
+  pct = Math.round(pct);
+
+  if (pct === 19) return "9"; // 19% USt
+  if (pct === 7) return "8"; // 7% USt
   return "0"; // keine USt
 }
 

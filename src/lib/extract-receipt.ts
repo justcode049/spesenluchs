@@ -91,12 +91,14 @@ export async function extractReceipt(
 
   const extraction: ReceiptExtraction = JSON.parse(jsonStr);
 
-  // Normalize VAT rates: if rate > 1, assume it's a percentage (e.g. 19 → 0.19)
+  // Normalize VAT rates to decimal (e.g. 1900 → 0.19, 19 → 0.19, 0.19 → 0.19)
   if (extraction.vat_positions) {
-    extraction.vat_positions = extraction.vat_positions.map((vat) => ({
-      ...vat,
-      rate: vat.rate > 1 ? vat.rate / 100 : vat.rate,
-    }));
+    extraction.vat_positions = extraction.vat_positions.map((vat) => {
+      let rate = vat.rate;
+      if (rate > 100) rate = rate / 10000; // 1900 → 0.19
+      else if (rate > 1) rate = rate / 100; // 19 → 0.19
+      return { ...vat, rate };
+    });
   }
 
   return extraction;
