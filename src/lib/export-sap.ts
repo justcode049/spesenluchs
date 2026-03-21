@@ -126,10 +126,10 @@ export function generateSapIDoc(data: SapExportData): string {
   xmlLines.push('<BAPI_ACC_DOCUMENT_POST>');
   xmlLines.push('  <DOCUMENTHEADER>');
   xmlLines.push(`    <OBJ_TYPE>BKPFF</OBJ_TYPE>`);
-  xmlLines.push(`    <OBJ_KEY>${data.title}</OBJ_KEY>`);
+  xmlLines.push(`    <OBJ_KEY>${escapeXml(data.title)}</OBJ_KEY>`);
   xmlLines.push(`    <BUS_ACT>RFBU</BUS_ACT>`);
-  xmlLines.push(`    <USERNAME>${data.userName}</USERNAME>`);
-  xmlLines.push(`    <HEADER_TXT>Reisekosten ${data.destination}</HEADER_TXT>`);
+  xmlLines.push(`    <USERNAME>${escapeXml(data.userName)}</USERNAME>`);
+  xmlLines.push(`    <HEADER_TXT>${escapeXml(`Reisekosten ${data.destination}`)}</HEADER_TXT>`);
   xmlLines.push(`    <COMP_CODE>${data.companyCode}</COMP_CODE>`);
   xmlLines.push(`    <DOC_DATE>${docDate}</DOC_DATE>`);
   xmlLines.push(`    <PSTNG_DATE>${postingDate}</PSTNG_DATE>`);
