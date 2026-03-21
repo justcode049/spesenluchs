@@ -10,7 +10,7 @@ setup("authenticate", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill(TEST_EMAIL);
   await page.getByLabel("Passwort").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Anmelden" }).click();
+  await page.getByRole("button", { name: "Anmelden", exact: true }).click();
 
   // If login succeeds, we land on /dashboard
   // If it fails (user doesn't exist), register first
@@ -37,7 +37,7 @@ setup("authenticate", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(TEST_EMAIL);
     await page.getByLabel("Passwort").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "Anmelden" }).click();
+    await page.getByRole("button", { name: "Anmelden", exact: true }).click();
     await page.waitForURL("**/dashboard", { timeout: 10000 });
   }
 

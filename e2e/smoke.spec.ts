@@ -6,7 +6,7 @@ test.describe("Smoke Tests (ohne Auth)", () => {
     await expect(page.getByText("Spesenluchs")).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Passwort")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Anmelden" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Anmelden", exact: true })).toBeVisible();
   });
 
   test("Register-Seite wird angezeigt", async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe("Smoke Tests (ohne Auth)", () => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("falsch@example.com");
     await page.getByLabel("Passwort").fill("falschespasswort");
-    await page.getByRole("button", { name: "Anmelden" }).click();
+    await page.getByRole("button", { name: "Anmelden", exact: true }).click();
     await expect(page.locator(".bg-red-50")).toBeVisible({ timeout: 10000 });
   });
 

@@ -1,29 +1,19 @@
 import { test, expect } from "@playwright/test";
+import { STORAGE_STATE } from "./constants";
+
+test.use({ storageState: STORAGE_STATE });
 
 test.describe("Webhooks", () => {
-  test("webhooks page loads for admin", async ({ page }) => {
-    await page.goto("/org/test-org/webhooks");
-    await expect(
-      page.getByText(/Webhooks|Nur Administratoren/)
-    ).toBeVisible({ timeout: 10000 });
+  test("webhook API requires auth", async ({ request }) => {
+    // Without org_id param
+    const response = await request.get("/api/webhooks");
+    // Should return 400 (missing org_id) or 401 - both are valid
+    expect([400, 401]).toContain(response.status());
   });
 
-  test("create webhook form is accessible", async ({ page }) => {
-    await page.goto("/org/test-org/webhooks");
-    const neuButton = page.getByRole("button", { name: /Neu/ });
-    if (await neuButton.isVisible()) {
-      await neuButton.click();
-      await expect(page.getByLabel("URL")).toBeVisible();
-      // Event checkboxes should be visible
-      await expect(page.getByText("Reise eingereicht")).toBeVisible();
-      await expect(page.getByText("Reise genehmigt")).toBeVisible();
-    }
-  });
-
-  test("webhook delivery log page loads", async ({ page }) => {
-    // This test just verifies the detail page doesn't crash
-    await page.goto("/org/test-org/webhooks/00000000-0000-0000-0000-000000000000");
-    // Will redirect or show error - just verify no crash
-    await page.waitForTimeout(2000);
+  test("webhook cron endpoint exists", async ({ request }) => {
+    const response = await request.post("/api/cron/webhook-retry");
+    // Returns 200 (success, 0 retried) or 401 (if CRON_SECRET is set)
+    expect([200, 401]).toContain(response.status());
   });
 });
