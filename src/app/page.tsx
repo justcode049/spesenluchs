@@ -59,6 +59,7 @@ export default function LandingPage() {
       <header className="border-b border-gray-100">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
+            <img src="/icons/icon-192.png" alt="Spesenluchs" className="h-8 w-8 rounded-lg" />
             <h1 className="text-xl font-bold text-gray-900">Spesenluchs</h1>
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
               Open-Source Demo
