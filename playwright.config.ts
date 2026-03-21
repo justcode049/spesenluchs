@@ -40,6 +40,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
+      name: "receipt-flows",
+      testMatch: /receipt-flows\.spec\.ts/,
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       name: "pwa",
       testMatch: /pwa\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },

@@ -32,20 +32,20 @@ export function Nav() {
           </div>
         </div>
       )}
-      <div className="mx-auto flex max-w-2xl items-center justify-around py-2">
+      <div className="mx-auto flex max-w-2xl items-center justify-around py-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 px-3 py-1 text-xs ${
+              className={`flex flex-col items-center gap-0.5 px-4 py-2 min-h-[44px] min-w-[44px] justify-center text-xs font-medium ${
                 isActive
                   ? "text-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-6 w-6" />
               {item.label}
             </Link>
           );
