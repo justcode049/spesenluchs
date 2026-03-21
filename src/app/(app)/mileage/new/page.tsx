@@ -188,7 +188,7 @@ export default function NewMileagePage() {
           disabled={saving}
           className="w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {saving ? "Wird gespeichert..." : "Fahrt speichern"}
+          {saving ? "Wird gespeichert..." : "Fahrt erfassen"}
         </button>
       </form>
     </div>

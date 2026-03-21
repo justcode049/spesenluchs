@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DayAllowance, MealDeduction } from "@/lib/types";
-import { useToast } from "@/components/toast";
+import { useImmediateSave } from "@/hooks/use-auto-save";
+import { SaveStatusIndicator } from "@/components/save-status";
 
 interface MealDeductionTogglesProps {
   tripId: string;
@@ -18,7 +19,7 @@ export function MealDeductionToggles({
   mealDeductions,
 }: MealDeductionTogglesProps) {
   const router = useRouter();
-  const { showToast } = useToast();
+  const { status, save } = useImmediateSave();
 
   // Build initial state from existing deductions
   const initialState: Record<string, MealDeduction> = {};
@@ -33,21 +34,18 @@ export function MealDeductionToggles({
   }
 
   const [meals, setMeals] = useState(initialState);
-  const [saving, setSaving] = useState(false);
 
   function toggle(date: string, meal: "breakfast" | "lunch" | "dinner") {
-    setMeals((prev) => ({
-      ...prev,
-      [date]: { ...prev[date], [meal]: !prev[date][meal] },
-    }));
-  }
+    const updated = {
+      ...meals,
+      [date]: { ...meals[date], [meal]: !meals[date][meal] },
+    };
+    setMeals(updated);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
+    // Immediately save
+    save(async () => {
       const supabase = createClient();
-      const deductions = Object.values(meals);
-
+      const deductions = Object.values(updated);
       const { error } = await supabase
         .from("trips")
         .update({
@@ -57,13 +55,8 @@ export function MealDeductionToggles({
         .eq("id", tripId);
 
       if (error) throw new Error(error.message);
-
-      showToast("Mahlzeiten gespeichert.");
       router.refresh();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Fehler", "error");
-    }
-    setSaving(false);
+    });
   }
 
   const toggleClass = (active: boolean) =>
@@ -75,9 +68,12 @@ export function MealDeductionToggles({
 
   return (
     <div className="mb-6">
-      <h2 className="mb-3 text-sm font-semibold text-gray-700">
-        Gestellte Mahlzeiten
-      </h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-700">
+          Gestellte Mahlzeiten
+        </h2>
+        <SaveStatusIndicator status={status} />
+      </div>
       <p className="mb-3 text-xs text-gray-500">
         Markiere Mahlzeiten, die vom Arbeitgeber gestellt wurden (z.B. Hotelfrühstück).
       </p>
@@ -121,13 +117,6 @@ export function MealDeductionToggles({
           );
         })}
       </div>
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="mt-3 w-full rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-      >
-        {saving ? "Speichern..." : "Mahlzeiten speichern"}
-      </button>
     </div>
   );
 }

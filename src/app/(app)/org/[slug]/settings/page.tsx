@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/components/toast";
 import type { Organization, OrgRole } from "@/lib/types";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { SaveStatusIndicator } from "@/components/save-status";
 
 export default function OrgSettingsPage() {
   const params = useParams();
   const router = useRouter();
-  const { showToast } = useToast();
   const slug = params.slug as string;
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [role, setRole] = useState<OrgRole | null>(null);
   const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const inputClass =
@@ -54,24 +53,17 @@ export default function OrgSettingsPage() {
     load();
   }, [slug, router]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  const saveFn = useCallback(async () => {
     if (!org || role !== "admin") return;
-
-    setSaving(true);
     const supabase = createClient();
     const { error } = await supabase
       .from("organizations")
       .update({ name, updated_at: new Date().toISOString() })
       .eq("id", org.id);
+    if (error) throw new Error(error.message);
+  }, [org, role, name]);
 
-    if (error) {
-      showToast("Fehler beim Speichern", "error");
-    } else {
-      showToast("Gespeichert!");
-    }
-    setSaving(false);
-  }
+  const saveStatus = useAutoSave(loading ? null : name, saveFn, 800);
 
   if (loading) {
     return (
@@ -123,9 +115,12 @@ export default function OrgSettingsPage() {
       </div>
 
       {role === "admin" ? (
-        <form onSubmit={handleSave} className="space-y-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Organisationsname</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">Organisationsname</label>
+              <SaveStatusIndicator status={saveStatus} />
+            </div>
             <input
               type="text"
               value={name}
@@ -138,15 +133,7 @@ export default function OrgSettingsPage() {
             <label className="block text-sm font-medium text-gray-700">Slug (URL)</label>
             <p className="mt-1 text-sm text-gray-500">{org.slug}</p>
           </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Speichern..." : "Speichern"}
-          </button>
-        </form>
+        </div>
       ) : (
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-sm text-gray-600">

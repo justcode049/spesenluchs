@@ -9,7 +9,7 @@ import { ReceiptExtraction } from "@/lib/types";
 interface BatchItem {
   id: string;
   file: File;
-  status: "pending" | "uploading" | "extracting" | "done" | "error";
+  status: "pending" | "uploading" | "extracting" | "done" | "saved" | "error";
   extraction?: ReceiptExtraction;
   imagePath?: string;
   error?: string;
@@ -21,8 +21,6 @@ export default function BatchUploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<BatchItem[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [saving, setSaving] = useState(false);
-
   function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -82,6 +80,27 @@ export default function BatchUploadPage() {
 
         const { extraction } = await response.json();
         updateItem(item.id, { status: "done", extraction });
+
+        // Auto-save immediately after successful extraction
+        const { error: insertError } = await supabase.from("receipts").insert({
+          user_id: user.id,
+          image_path: fileName,
+          date: extraction.date,
+          total_amount: extraction.total_amount,
+          currency: extraction.currency,
+          vendor_name: extraction.vendor_name,
+          vendor_city: extraction.vendor_city,
+          receipt_type: extraction.receipt_type,
+          vat_positions: extraction.vat_positions,
+          confidence: extraction.confidence,
+          raw_extraction: extraction,
+          status: "confirmed",
+        });
+        if (insertError) {
+          updateItem(item.id, { status: "error", error: insertError.message });
+          continue;
+        }
+        updateItem(item.id, { status: "saved" as BatchItem["status"] });
       } catch (err) {
         updateItem(item.id, {
           status: "error",
@@ -92,41 +111,8 @@ export default function BatchUploadPage() {
     setProcessing(false);
   }
 
-  async function saveAll() {
-    setSaving(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    let saved = 0;
-    for (const item of items) {
-      if (item.status !== "done" || !item.extraction || !item.imagePath) continue;
-
-      const ex = item.extraction;
-      const { error } = await supabase.from("receipts").insert({
-        user_id: user.id,
-        image_path: item.imagePath,
-        date: ex.date,
-        total_amount: ex.total_amount,
-        currency: ex.currency,
-        vendor_name: ex.vendor_name,
-        vendor_city: ex.vendor_city,
-        receipt_type: ex.receipt_type,
-        vat_positions: ex.vat_positions,
-        confidence: ex.confidence,
-        raw_extraction: ex,
-        status: "confirmed",
-      });
-
-      if (!error) saved++;
-    }
-
-    showToast(`${saved} Belege gespeichert!`);
-    router.push("/dashboard");
-    router.refresh();
-  }
-
-  const doneCount = items.filter((i) => i.status === "done").length;
+  const savedCount = items.filter((i) => i.status === "saved").length;
+  const doneCount = items.filter((i) => i.status === "done" || i.status === "saved").length;
   const errorCount = items.filter((i) => i.status === "error").length;
 
   return (
@@ -211,13 +197,12 @@ export default function BatchUploadPage() {
                 Wird analysiert... ({doneCount}/{items.length})
               </div>
             )}
-            {doneCount > 0 && !processing && (
+            {savedCount > 0 && !processing && (
               <button
-                onClick={saveAll}
-                disabled={saving}
-                className="flex-1 rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                onClick={() => { router.push("/dashboard"); router.refresh(); }}
+                className="flex-1 rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700"
               >
-                {saving ? "Speichern..." : `${doneCount} Belege speichern`}
+                {savedCount} Belege gespeichert — zum Dashboard
               </button>
             )}
           </div>
@@ -241,13 +226,15 @@ function StatusBadge({ status }: { status: BatchItem["status"] }) {
     uploading: "bg-blue-100 text-blue-700",
     extracting: "bg-yellow-100 text-yellow-700",
     done: "bg-green-100 text-green-700",
+    saved: "bg-green-100 text-green-700",
     error: "bg-red-100 text-red-700",
   };
   const labels = {
     pending: "Wartend",
     uploading: "Upload...",
     extracting: "KI...",
-    done: "Fertig",
+    done: "Analysiert",
+    saved: "Gespeichert",
     error: "Fehler",
   };
   return (

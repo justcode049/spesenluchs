@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { VEHICLE_LABELS, VehicleType } from "@/lib/types";
 import { useOrg } from "@/lib/org-context";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { SaveStatusIndicator } from "@/components/save-status";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -14,7 +16,7 @@ export default function ProfilePage() {
   const { memberships, switchOrg, org } = useOrg();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [city, setCity] = useState("");
@@ -36,6 +38,7 @@ export default function ProfilePage() {
       if (!user) return;
 
       setEmail(user.email || "");
+      setUserId(user.id);
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -59,14 +62,15 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
+  // Build a serializable value for auto-save
+  const profileData = JSON.stringify({
+    displayName, city, employer, primaryWorkplace,
+    vehicleType, employmentType, taxId, licensePlate, defaultCostCenter,
+  });
 
+  const saveFn = useCallback(async () => {
+    if (!userId) return;
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -81,15 +85,12 @@ export default function ProfilePage() {
         default_cost_center: defaultCostCenter || null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", user.id);
+      .eq("id", userId);
 
-    if (error) {
-      showToast("Fehler beim Speichern.", "error");
-    } else {
-      showToast("Profil gespeichert.");
-    }
-    setSaving(false);
-  }
+    if (error) throw new Error(error.message);
+  }, [userId, displayName, city, employer, primaryWorkplace, vehicleType, employmentType, taxId, licensePlate, defaultCostCenter]);
+
+  const saveStatus = useAutoSave(loading ? null : profileData, saveFn, 800);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -108,9 +109,12 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-900">Profil</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900">Profil</h1>
+        <SaveStatusIndicator status={saveStatus} />
+      </div>
 
-      <form onSubmit={handleSave} className="space-y-4">
+      <div className="space-y-4">
         {/* Persönliche Daten */}
         <h2 className="text-sm font-semibold text-gray-700">Persönliche Daten</h2>
 
@@ -186,15 +190,7 @@ export default function ProfilePage() {
           <label className="block text-sm font-medium text-gray-700">Standard-Kostenstelle</label>
           <input type="text" value={defaultCostCenter} onChange={(e) => setDefaultCostCenter(e.target.value)} className={inputClass} placeholder="z.B. 4200 Reisekosten" />
         </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? "Speichern..." : "Profil speichern"}
-        </button>
-      </form>
+      </div>
 
       {/* Organisationen */}
       <h2 className="mt-8 text-sm font-semibold text-gray-700">Organisationen</h2>
