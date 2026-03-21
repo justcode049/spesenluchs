@@ -58,12 +58,23 @@ export default function OrgMembersPage() {
 
       const { data: memberData } = await supabase
         .from("memberships")
-        .select("id, user_id, role, profile:profiles(display_name)")
+        .select("id, user_id, role")
         .eq("organization_id", org.id);
+
+      // Load profiles separately (no FK from memberships to profiles)
+      const userIds = (memberData || []).map((m) => m.user_id);
+      const { data: profiles } = userIds.length > 0
+        ? await supabase.from("profiles").select("id, display_name").in("id", userIds)
+        : { data: [] };
+
+      const profileMap = new Map((profiles || []).map((p) => [p.id, p.display_name]));
 
       const myMembership = (memberData || []).find((m) => m.user_id === user.id);
       setMyRole((myMembership?.role as OrgRole) || null);
-      setMembers((memberData || []) as unknown as MemberRow[]);
+      setMembers((memberData || []).map((m) => ({
+        ...m,
+        profile: { display_name: profileMap.get(m.user_id) || null },
+      })));
 
       const { data: invData } = await supabase
         .from("invitations")
