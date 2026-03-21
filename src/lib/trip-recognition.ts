@@ -50,10 +50,10 @@ export async function recognizeTrip(
     const cityMatch = receipt.vendor_city && fuzzyMatch(receipt.vendor_city, trip.destination);
 
     if (dateMatch && cityMatch) {
-      return { type: "existing", tripId: trip.id, confidence: 0.95 };
+      return { type: "existing", tripId: trip.id, tripTitle: trip.destination, confidence: 0.95 };
     }
     if (dateMatch) {
-      return { type: "existing", tripId: trip.id, confidence: 0.7 };
+      return { type: "existing", tripId: trip.id, tripTitle: trip.destination, confidence: 0.7 };
     }
   }
 

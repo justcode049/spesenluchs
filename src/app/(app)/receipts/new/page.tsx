@@ -92,6 +92,7 @@ export default function NewReceiptPage() {
     hospitality_attendees?: string;
     hospitality_tip?: number;
     trip_id?: string;
+    trip_assignment_source?: 'manual' | 'auto_existing' | 'auto_new_draft' | null;
   }) {
     setSaving(true);
 
@@ -121,6 +122,7 @@ export default function NewReceiptPage() {
         hospitality_attendees: data.hospitality_attendees || null,
         hospitality_tip: data.hospitality_tip || null,
         trip_id: data.trip_id || null,
+        trip_assignment_source: data.trip_assignment_source || null,
         status: "confirmed",
       });
 

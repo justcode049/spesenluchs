@@ -8,6 +8,8 @@ export default async function DashboardPage() {
     .select("*")
     .order("date", { ascending: false });
 
+  const unassignedCount = (receipts || []).filter(r => !r.trip_id).length;
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -27,6 +29,17 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {unassignedCount > 0 && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 flex items-center justify-between">
+          <p className="text-sm text-amber-700">
+            {unassignedCount} {unassignedCount === 1 ? "Beleg ist" : "Belege sind"} keiner Reise zugeordnet.
+          </p>
+          <Link href="/trips" className="text-sm font-medium text-amber-700 hover:text-amber-800 underline">
+            Reisen anzeigen
+          </Link>
+        </div>
+      )}
 
       {!receipts || receipts.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
@@ -67,6 +80,11 @@ export default async function DashboardPage() {
                   <span className="inline-block mt-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                     {receipt.receipt_type || "sonstiges"}
                   </span>
+                  {!receipt.trip_id && (
+                    <span className="inline-block mt-1 ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600">
+                      Keine Reise
+                    </span>
+                  )}
                 </div>
               </div>
             </Link>

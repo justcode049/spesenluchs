@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { ReceiptExtraction, ReceiptType, TripAssignment, formatVatRate } from "@/lib/types";
 import { ConfidenceField } from "./confidence-field";
 
@@ -33,6 +35,7 @@ interface ReceiptReviewFormProps {
     hospitality_attendees?: string;
     hospitality_tip?: number;
     trip_id?: string;
+    trip_assignment_source?: 'manual' | 'auto_existing' | 'auto_new_draft' | null;
   }) => void;
   onDiscard: () => void;
   saving?: boolean;
@@ -58,6 +61,10 @@ export function ReceiptReviewForm({
   const [hospitalityOccasion, setHospitalityOccasion] = useState("");
   const [hospitalityAttendees, setHospitalityAttendees] = useState("");
   const [hospitalityTip, setHospitalityTip] = useState("");
+  const [effectiveTripAssignment, setEffectiveTripAssignment] = useState<TripAssignment | null>(tripAssignment ?? null);
+  const [creatingTrip, setCreatingTrip] = useState(false);
+  const [tripCreatedFromDraft, setTripCreatedFromDraft] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   const isRestaurant = receiptType === "restaurant";
 
@@ -87,8 +94,11 @@ export function ReceiptReviewForm({
         hospitality_attendees: hospitalityAttendees || undefined,
         hospitality_tip: hospitalityTip ? parseFloat(hospitalityTip) : undefined,
       }),
-      ...(tripAssignment?.type === "existing" && tripAssignment.tripId
-        ? { trip_id: tripAssignment.tripId }
+      ...(effectiveTripAssignment?.type === "existing" && effectiveTripAssignment.tripId
+        ? {
+            trip_id: effectiveTripAssignment.tripId,
+            trip_assignment_source: tripCreatedFromDraft ? "auto_new_draft" as const : "auto_existing" as const,
+          }
         : {}),
     });
   }
@@ -236,26 +246,121 @@ export function ReceiptReviewForm({
       )}
 
       {/* Trip Assignment Banner */}
-      {tripAssignment && tripAssignment.type !== "none" && (
-        <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
-          {tripAssignment.type === "existing" && tripAssignment.tripId && (
-            <p className="text-sm text-purple-700">
-              Automatisch einer bestehenden Reise zugeordnet
-              <span className="ml-1 text-xs text-purple-500">
-                (Konfidenz: {Math.round(tripAssignment.confidence * 100)}%)
-              </span>
-            </p>
+      {effectiveTripAssignment && effectiveTripAssignment.type !== "none" && !dismissed && (
+        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 space-y-2">
+          {effectiveTripAssignment.type === "existing" && effectiveTripAssignment.tripId && (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-purple-700">
+                  Automatisch zugeordnet: <strong>{effectiveTripAssignment.tripTitle || "Reise"}</strong>
+                  <span className="ml-1 text-xs text-purple-500">
+                    ({Math.round(effectiveTripAssignment.confidence * 100)}%)
+                  </span>
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  href={`/trips/${effectiveTripAssignment.tripId}`}
+                  target="_blank"
+                  className="text-xs font-medium text-purple-700 hover:text-purple-800 underline"
+                >
+                  Zur Reise &rarr;
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEffectiveTripAssignment({ type: "none", confidence: 0 });
+                    setDismissed(true);
+                  }}
+                  className="text-xs font-medium text-purple-600 hover:text-purple-800"
+                >
+                  Nicht zuordnen
+                </button>
+              </div>
+            </>
           )}
-          {tripAssignment.type === "new_draft" && tripAssignment.suggestedTrip && (
-            <div>
-              <p className="text-sm font-medium text-purple-700">
-                Neue Reise erkannt
-              </p>
-              <p className="text-xs text-purple-600">
-                {tripAssignment.suggestedTrip.destination} ({tripAssignment.suggestedTrip.dates})
-              </p>
-            </div>
+          {effectiveTripAssignment.type === "new_draft" && effectiveTripAssignment.suggestedTrip && (
+            <>
+              <div>
+                <p className="text-sm font-medium text-purple-700">
+                  Neue Reise erkannt: <strong>{effectiveTripAssignment.suggestedTrip.destination}</strong>
+                </p>
+                <p className="text-xs text-purple-600">
+                  {effectiveTripAssignment.suggestedTrip.dates}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={creatingTrip}
+                  onClick={async () => {
+                    setCreatingTrip(true);
+                    try {
+                      const supabase = createClient();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user || !effectiveTripAssignment.suggestedTrip) return;
+
+                      const parts = effectiveTripAssignment.suggestedTrip.dates.split(" – ");
+                      const startDate = parts[0];
+                      const endDate = parts[1] || startDate;
+
+                      const { data: newTrip } = await supabase.from("trips").insert({
+                        user_id: user.id,
+                        destination: effectiveTripAssignment.suggestedTrip.destination,
+                        country: "DE",
+                        start_datetime: `${startDate}T08:00:00`,
+                        end_datetime: `${endDate}T18:00:00`,
+                        meal_deductions: [],
+                        status: "draft",
+                      }).select("id").single();
+
+                      if (newTrip) {
+                        setEffectiveTripAssignment({
+                          type: "existing",
+                          tripId: newTrip.id,
+                          tripTitle: effectiveTripAssignment.suggestedTrip.destination,
+                          confidence: 1.0,
+                        });
+                        setTripCreatedFromDraft(true);
+                      }
+                    } catch {
+                      // Trip creation failed, user can still save receipt without trip
+                    }
+                    setCreatingTrip(false);
+                  }}
+                  className="text-xs font-medium text-purple-700 hover:text-purple-800 underline disabled:opacity-50"
+                >
+                  {creatingTrip ? "Wird erstellt..." : "Reise erstellen"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEffectiveTripAssignment({ type: "none", confidence: 0 });
+                    setDismissed(true);
+                  }}
+                  className="text-xs font-medium text-purple-600 hover:text-purple-800"
+                >
+                  Nicht zuordnen
+                </button>
+              </div>
+            </>
           )}
+        </div>
+      )}
+      {dismissed && (
+        <div className="rounded-md border border-gray-200 bg-gray-50 p-2 flex items-center justify-between">
+          <p className="text-xs text-gray-500">Reise-Zuordnung entfernt</p>
+          <button
+            type="button"
+            onClick={() => {
+              setEffectiveTripAssignment(tripAssignment ?? null);
+              setDismissed(false);
+              setTripCreatedFromDraft(false);
+            }}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+          >
+            Rückgängig
+          </button>
         </div>
       )}
 

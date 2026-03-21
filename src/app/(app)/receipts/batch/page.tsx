@@ -4,13 +4,14 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
-import { ReceiptExtraction } from "@/lib/types";
+import { ReceiptExtraction, TripAssignment } from "@/lib/types";
 
 interface BatchItem {
   id: string;
   file: File;
   status: "pending" | "uploading" | "extracting" | "done" | "saved" | "error";
   extraction?: ReceiptExtraction;
+  tripAssignment?: TripAssignment;
   imagePath?: string;
   error?: string;
 }
@@ -78,8 +79,8 @@ export default function BatchUploadPage() {
           throw new Error(data.error || "Extraktion fehlgeschlagen");
         }
 
-        const { extraction } = await response.json();
-        updateItem(item.id, { status: "done", extraction });
+        const { extraction, tripAssignment } = await response.json();
+        updateItem(item.id, { status: "done", extraction, tripAssignment });
 
         // Auto-save immediately after successful extraction
         const { error: insertError } = await supabase.from("receipts").insert({
@@ -94,6 +95,8 @@ export default function BatchUploadPage() {
           vat_positions: extraction.vat_positions,
           confidence: extraction.confidence,
           raw_extraction: extraction,
+          trip_id: tripAssignment?.type === "existing" ? tripAssignment.tripId : null,
+          trip_assignment_source: tripAssignment?.type === "existing" ? "auto_existing" : null,
           status: "confirmed",
         });
         if (insertError) {
@@ -114,6 +117,7 @@ export default function BatchUploadPage() {
   const savedCount = items.filter((i) => i.status === "saved").length;
   const doneCount = items.filter((i) => i.status === "done" || i.status === "saved").length;
   const errorCount = items.filter((i) => i.status === "error").length;
+  const newDraftCount = items.filter((i) => i.tripAssignment?.type === "new_draft").length;
 
   return (
     <div>
@@ -167,10 +171,13 @@ export default function BatchUploadPage() {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {item.file.name}
                   </p>
-                  {item.status === "done" && item.extraction && (
+                  {(item.status === "done" || item.status === "saved") && item.extraction && (
                     <p className="text-xs text-gray-500">
                       {item.extraction.vendor_name || "Unbekannt"}
                       {item.extraction.total_amount != null && ` · ${item.extraction.total_amount.toFixed(2)} ${item.extraction.currency}`}
+                      {item.tripAssignment?.type === "existing" && (
+                        <span className="ml-1 text-purple-600">· Reise zugeordnet</span>
+                      )}
                     </p>
                   )}
                   {item.status === "error" && (
@@ -206,6 +213,13 @@ export default function BatchUploadPage() {
               </button>
             )}
           </div>
+
+          {newDraftCount > 0 && !processing && savedCount > 0 && (
+            <div className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-700">
+              {newDraftCount} {newDraftCount === 1 ? "Beleg könnte" : "Belege könnten"} zu neuen Reisen gehören.
+              Ordne sie manuell über die Reise-Detailseite zu.
+            </div>
+          )}
 
           <button
             onClick={() => setItems([])}

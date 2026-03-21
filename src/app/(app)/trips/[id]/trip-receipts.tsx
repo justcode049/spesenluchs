@@ -14,6 +14,7 @@ interface TripReceiptsProps {
     total_amount: number | null;
     currency: string;
     receipt_type: string;
+    trip_assignment_source?: string | null;
   }>;
   unlinkedReceipts: Array<{
     id: string;
@@ -22,6 +23,7 @@ interface TripReceiptsProps {
     total_amount: number | null;
     currency: string;
     receipt_type: string;
+    trip_assignment_source?: string | null;
   }>;
 }
 
@@ -137,6 +139,11 @@ export function TripReceipts({
                 <p className="text-xs text-gray-500">
                   {r.date ? new Date(r.date).toLocaleDateString("de-DE") : "–"}
                   {" · "}{r.receipt_type}
+                  {r.trip_assignment_source?.startsWith("auto") && (
+                    <span className="ml-1 rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">
+                      KI-erkannt
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
