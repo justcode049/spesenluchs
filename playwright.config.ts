@@ -29,7 +29,7 @@ export default defineConfig({
     },
     {
       name: "enterprise",
-      testMatch: /(cost-centers|api-keys|webhooks|sso)\.spec\.ts/,
+      testMatch: /(cost-centers|api-keys|webhooks|sso|organization)\.spec\.ts/,
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
