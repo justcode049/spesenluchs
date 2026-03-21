@@ -16,6 +16,7 @@ export default function OrgSettingsPage() {
   const [org, setOrg] = useState<Organization | null>(null);
   const [role, setRole] = useState<OrgRole | null>(null);
   const [name, setName] = useState("");
+  const [requireCostCenter, setRequireCostCenter] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const inputClass =
@@ -47,6 +48,7 @@ export default function OrgSettingsPage() {
 
       setOrg(orgData);
       setName(orgData.name);
+      setRequireCostCenter(orgData.require_cost_center ?? false);
       setRole((membership?.role as OrgRole) || null);
       setLoading(false);
     }
@@ -58,12 +60,12 @@ export default function OrgSettingsPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from("organizations")
-      .update({ name, updated_at: new Date().toISOString() })
+      .update({ name, require_cost_center: requireCostCenter, updated_at: new Date().toISOString() })
       .eq("id", org.id);
     if (error) throw new Error(error.message);
-  }, [org, role, name]);
+  }, [org, role, name, requireCostCenter]);
 
-  const saveStatus = useAutoSave(loading ? null : name, saveFn, 800);
+  const saveStatus = useAutoSave(loading ? null : `${name}|${requireCostCenter}`, saveFn, 800);
 
   if (loading) {
     return (
@@ -105,12 +107,44 @@ export default function OrgSettingsPage() {
           Genehmigungen
         </Link>
         {role === "admin" && (
-          <Link
-            href={`/org/${slug}/audit`}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Audit-Log
-          </Link>
+          <>
+            <Link
+              href={`/org/${slug}/audit`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Audit-Log
+            </Link>
+            <Link
+              href={`/org/${slug}/cost-centers`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Kostenstellen
+            </Link>
+            <Link
+              href={`/org/${slug}/api-keys`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              API-Keys
+            </Link>
+            <Link
+              href={`/org/${slug}/webhooks`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Webhooks
+            </Link>
+            <Link
+              href={`/org/${slug}/sso`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              SSO
+            </Link>
+            <Link
+              href={`/org/${slug}/integrations`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Integrationen
+            </Link>
+          </>
         )}
       </div>
 
@@ -132,6 +166,21 @@ export default function OrgSettingsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">Slug (URL)</label>
             <p className="mt-1 text-sm text-gray-500">{org.slug}</p>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={requireCostCenter}
+                onChange={(e) => setRequireCostCenter(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="font-medium text-gray-700">Kostenstelle bei Reisen als Pflichtfeld</span>
+            </label>
+            <p className="mt-1 text-xs text-gray-400 ml-6">
+              Wenn aktiviert, müssen Mitarbeiter bei jeder Reise eine Kostenstelle auswählen.
+            </p>
           </div>
         </div>
       ) : (

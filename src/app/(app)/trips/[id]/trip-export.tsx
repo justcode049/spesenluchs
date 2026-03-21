@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DayAllowance } from "@/lib/types";
 import { useToast } from "@/components/toast";
+import { createClient } from "@/lib/supabase/client";
 
 interface TripExportProps {
   tripId: string;
@@ -11,6 +12,7 @@ interface TripExportProps {
     destination: string;
     start_datetime: string;
     end_datetime: string;
+    organization_id: string | null;
   };
   userName: string;
   allowances: DayAllowance[];
@@ -45,6 +47,24 @@ export function TripExport({
   const { showToast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [exportingDatev, setExportingDatev] = useState(false);
+  const [enabledErpTypes, setEnabledErpTypes] = useState<string[]>([]);
+  const [exportingSap, setExportingSap] = useState(false);
+  const [exportingEnventa, setExportingEnventa] = useState(false);
+
+  // Load enabled ERP integrations for this org
+  useEffect(() => {
+    if (!trip.organization_id) return;
+    async function loadErpConfigs() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("erp_configs")
+        .select("erp_type")
+        .eq("organization_id", trip.organization_id!)
+        .eq("enabled", true);
+      if (data) setEnabledErpTypes(data.map((c) => c.erp_type));
+    }
+    loadErpConfigs();
+  }, [trip.organization_id]);
 
   const exportData = {
     title: trip.title || trip.destination,
@@ -121,30 +141,103 @@ export function TripExport({
     setExportingDatev(false);
   }
 
+  async function handleSapExport() {
+    setExportingSap(true);
+    try {
+      // SAP export is via API v1 – needs API key. For UI, we use a dedicated server route.
+      const res = await fetch("/api/export/sap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "SAP-Export fehlgeschlagen");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `SAP_IDoc_${tripId}.xml`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("SAP-Export erstellt!");
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof Error ? err.message : "SAP-Export fehlgeschlagen.", "error");
+    }
+    setExportingSap(false);
+  }
+
+  async function handleEnventaExport() {
+    setExportingEnventa(true);
+    try {
+      const res = await fetch("/api/export/enventa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "enventa-Export fehlgeschlagen");
+      }
+
+      showToast("An enventa übermittelt!");
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof Error ? err.message : "enventa-Export fehlgeschlagen.", "error");
+    }
+    setExportingEnventa(false);
+  }
+
+  const showSap = enabledErpTypes.includes("sap");
+  const showEnventa = enabledErpTypes.includes("enventa");
+
   return (
     <div className="mb-6">
       <h2 className="mb-3 text-sm font-semibold text-gray-700">Export</h2>
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <button
           onClick={handlePdfExport}
           disabled={exporting}
-          className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="flex-1 min-w-[100px] rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           {exporting ? "Wird erstellt..." : "PDF Export"}
         </button>
         <button
           onClick={handleCsvExport}
-          className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="flex-1 min-w-[100px] rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           CSV Export
         </button>
         <button
           onClick={handleDatevExport}
           disabled={exportingDatev}
-          className="flex-1 rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+          className="flex-1 min-w-[100px] rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
         >
           {exportingDatev ? "Wird erstellt..." : "DATEV Export"}
         </button>
+        {showSap && (
+          <button
+            onClick={handleSapExport}
+            disabled={exportingSap}
+            className="flex-1 min-w-[100px] rounded-md border border-purple-300 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+          >
+            {exportingSap ? "Wird erstellt..." : "SAP Export"}
+          </button>
+        )}
+        {showEnventa && (
+          <button
+            onClick={handleEnventaExport}
+            disabled={exportingEnventa}
+            className="flex-1 min-w-[100px] rounded-md border border-teal-300 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50"
+          >
+            {exportingEnventa ? "Wird gesendet..." : "enventa Push"}
+          </button>
+        )}
       </div>
     </div>
   );

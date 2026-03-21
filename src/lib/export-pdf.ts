@@ -28,6 +28,7 @@ interface TripExportData {
   startDate: string;
   endDate: string;
   userName: string;
+  costCenter?: string;
   allowances: DayAllowance[];
   receipts: ExportReceipt[];
   mileage: ExportMileage[];
@@ -55,6 +56,10 @@ export function generatePDF(data: TripExportData): jsPDF {
   y += 5;
   doc.text(`Mitarbeiter: ${data.userName}`, 14, y);
   y += 5;
+  if (data.costCenter) {
+    doc.text(`Kostenstelle: ${data.costCenter}`, 14, y);
+    y += 5;
+  }
   doc.text(`Erstellt: ${new Date().toLocaleDateString("de-DE")}`, 14, y);
   y += 10;
 

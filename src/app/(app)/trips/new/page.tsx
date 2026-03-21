@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { getSupportedCountries } from "@/lib/per-diem";
 import { useOrg } from "@/lib/org-context";
+import { CostCenterSelect } from "@/components/cost-center-select";
 
 const countries = getSupportedCountries();
 
@@ -23,6 +24,26 @@ export default function NewTripPage() {
   const [startTime, setStartTime] = useState("08:00");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("18:00");
+  const [costCenterId, setCostCenterId] = useState<string | null>(null);
+  const [requireCostCenter, setRequireCostCenter] = useState(false);
+
+  // Load org's require_cost_center setting
+  useEffect(() => {
+    if (!org?.id) {
+      setRequireCostCenter(false);
+      return;
+    }
+    async function loadOrgSetting() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("organizations")
+        .select("require_cost_center")
+        .eq("id", org!.id)
+        .single();
+      if (data) setRequireCostCenter(data.require_cost_center ?? false);
+    }
+    loadOrgSetting();
+  }, [org?.id]);
 
   const inputClass =
     "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -60,6 +81,7 @@ export default function NewTripPage() {
           meal_deductions: [],
           status: "draft",
           organization_id: org?.id || null,
+          cost_center_id: costCenterId,
         })
         .select("id")
         .single();
@@ -181,6 +203,13 @@ export default function NewTripPage() {
             />
           </div>
         </div>
+
+        <CostCenterSelect
+          organizationId={org?.id || null}
+          value={costCenterId}
+          onChange={setCostCenterId}
+          required={requireCostCenter}
+        />
 
         <button
           type="submit"

@@ -65,6 +65,7 @@ export interface Trip {
   meal_deductions: MealDeduction[];
   status: TripStatus;
   organization_id: string | null;
+  cost_center_id: string | null;
   locked_at: string | null;
   content_hash: string | null;
   submitted_at: string | null;
@@ -132,6 +133,7 @@ export interface Receipt {
   raw_extraction: ReceiptExtraction | null;
   status: ReceiptStatus;
   trip_id: string | null;
+  trip_assignment_source?: 'manual' | 'auto_existing' | 'auto_new_draft' | null;
   organization_id: string | null;
   locked_at: string | null;
   content_hash: string | null;
@@ -157,6 +159,7 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  require_cost_center: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -194,6 +197,117 @@ export interface AuditEntry {
 export interface TripAssignment {
   type: "existing" | "new_draft" | "none";
   tripId?: string;
+  tripTitle?: string;
   confidence: number;
   suggestedTrip?: { destination: string; dates: string };
+}
+
+// Cost Centers / Kostenträger
+
+export interface CostObject {
+  id: string;
+  organization_id: string;
+  number: string;
+  name: string;
+  active: boolean;
+  valid_from: string | null;
+  valid_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostCenter {
+  id: string;
+  organization_id: string;
+  cost_object_id: string | null;
+  number: string;
+  name: string;
+  active: boolean;
+  valid_from: string | null;
+  valid_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCostCenter {
+  id: string;
+  user_id: string;
+  cost_center_id: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+// API Keys
+
+export interface ApiKey {
+  id: string;
+  organization_id: string;
+  name: string;
+  key_prefix: string;
+  key_hash: string;
+  scopes: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+// Webhooks
+
+export interface Webhook {
+  id: string;
+  organization_id: string;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event: string;
+  payload: Record<string, unknown>;
+  response_status: number | null;
+  response_body: string | null;
+  attempt: number;
+  delivered_at: string | null;
+  next_retry_at: string | null;
+  created_at: string;
+}
+
+// SSO
+
+export type SsoProvider = "azure_ad";
+
+export interface SsoConfig {
+  id: string;
+  organization_id: string;
+  provider: SsoProvider;
+  tenant_id: string;
+  client_id: string;
+  client_secret_encrypted: string;
+  email_domain: string;
+  auto_provision: boolean;
+  role_mapping: Record<string, OrgRole>;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ERP
+
+export type ErpType = "datev" | "sap" | "enventa";
+
+export interface ErpConfig {
+  id: string;
+  organization_id: string;
+  erp_type: ErpType;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }

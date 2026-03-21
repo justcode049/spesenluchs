@@ -1,12 +1,36 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { TripListClient } from "./trip-list-client";
 
 export default async function TripsPage() {
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data: trips } = await supabase
     .from("trips")
     .select("*")
     .order("start_datetime", { ascending: false });
+
+  // Load cost centers for filter (from all orgs user is member of)
+  let costCenters: Array<{ id: string; number: string; name: string }> = [];
+  if (user) {
+    const { data: memberships } = await supabase
+      .from("memberships")
+      .select("organization_id")
+      .eq("user_id", user.id);
+
+    if (memberships && memberships.length > 0) {
+      const orgIds = memberships.map((m) => m.organization_id);
+      const { data: cc } = await supabase
+        .from("cost_centers")
+        .select("id, number, name")
+        .in("organization_id", orgIds)
+        .eq("active", true)
+        .order("number");
+      costCenters = cc || [];
+    }
+  }
 
   return (
     <div>
@@ -31,43 +55,7 @@ export default async function TripsPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {trips.map((trip) => {
-            const start = new Date(trip.start_datetime);
-            const end = new Date(trip.end_datetime);
-            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-            return (
-              <Link
-                key={trip.id}
-                href={`/trips/${trip.id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {trip.title || trip.destination}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {start.toLocaleDateString("de-DE")} – {end.toLocaleDateString("de-DE")}
-                      {" · "}{days} {days === 1 ? "Tag" : "Tage"}
-                    </p>
-                    {trip.purpose && (
-                      <p className="mt-1 text-xs text-gray-400">{trip.purpose}</p>
-                    )}
-                  </div>
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${
-                    trip.status === "confirmed"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}>
-                    {trip.status === "confirmed" ? "Abgeschlossen" : "Entwurf"}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <TripListClient trips={trips} costCenters={costCenters} />
       )}
     </div>
   );

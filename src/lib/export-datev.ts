@@ -31,6 +31,7 @@ export interface DatevExportData {
   startDate: string;
   endDate: string;
   userName: string;
+  costCenter?: string;
   allowances: DayAllowance[];
   receipts: DatevReceipt[];
   mileage: DatevMileage[];
@@ -151,6 +152,7 @@ export function generateEXTF(data: DatevExportData): string {
     '"Belegdatum"',
     '"Belegfeld 1"',
     '"Buchungstext"',
+    '"KOST1"',
   ].join(";"));
 
   let belegNr = 1;
@@ -184,6 +186,7 @@ export function generateEXTF(data: DatevExportData): string {
       csvEscape(belegDate),               // Belegdatum
       csvEscape(`RK${String(belegNr).padStart(4, "0")}`), // Belegfeld 1
       csvEscape(text.substring(0, 60)),    // Buchungstext
+      csvEscape(data.costCenter || ""),    // KOST1
     ].join(";"));
 
     belegNr++;
@@ -210,6 +213,7 @@ export function generateEXTF(data: DatevExportData): string {
       csvEscape(belegDate),
       csvEscape(`RK${String(belegNr).padStart(4, "0")}`),
       csvEscape(text.substring(0, 60)),
+      csvEscape(data.costCenter || ""),    // KOST1
     ].join(";"));
 
     belegNr++;
@@ -234,6 +238,7 @@ export function generateEXTF(data: DatevExportData): string {
       csvEscape(belegDate),
       csvEscape(`RK${String(belegNr).padStart(4, "0")}`),
       csvEscape(`Verpflegungspauschale ${data.destination}`),
+      csvEscape(data.costCenter || ""),    // KOST1
     ].join(";"));
 
     belegNr++;

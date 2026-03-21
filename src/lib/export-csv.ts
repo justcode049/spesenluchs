@@ -25,6 +25,7 @@ interface TripExportData {
   destination: string;
   startDate: string;
   endDate: string;
+  costCenter?: string;
   allowances: DayAllowance[];
   receipts: ExportReceipt[];
   mileage: ExportMileage[];
@@ -37,6 +38,9 @@ export function generateCSV(data: TripExportData): string {
   lines.push(`Reisekostenabrechnung`);
   lines.push(`Reise;${data.title || data.destination}`);
   lines.push(`Zeitraum;${formatDate(data.startDate)} - ${formatDate(data.endDate)}`);
+  if (data.costCenter) {
+    lines.push(`Kostenstelle;${data.costCenter}`);
+  }
   lines.push("");
 
   // Per diems

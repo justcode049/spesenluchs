@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { SsoLoginButton } from "@/components/sso-login-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -88,6 +89,8 @@ export default function LoginPage() {
             {loading ? "Wird angemeldet..." : "Anmelden"}
           </button>
         </form>
+
+        <SsoLoginButton />
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Noch kein Konto?{" "}

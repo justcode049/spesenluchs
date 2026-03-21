@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeReceiptHash, computeTripHash } from "./gobd";
+import { dispatchWebhookEvent } from "./webhooks";
 
 export async function submitTrip(tripId: string, userId: string) {
   const supabase = await createClient();
@@ -62,6 +63,17 @@ export async function submitTrip(tripId: string, userId: string) {
     changes: { status: { old: "draft", new: "submitted" } },
   });
 
+  // Dispatch webhook
+  if (trip.organization_id) {
+    dispatchWebhookEvent(trip.organization_id, "trip.submitted", {
+      trip_id: tripId,
+      title: trip.title || trip.destination,
+      destination: trip.destination,
+      status: "submitted",
+      submitted_at: now,
+    }).catch(() => {}); // fire-and-forget
+  }
+
   return { success: true };
 }
 
@@ -112,6 +124,18 @@ export async function approveTrip(tripId: string, reviewerId: string) {
     action: "approve",
     changes: { status: { old: "submitted", new: "approved" } },
   });
+
+  // Dispatch webhook
+  if (trip.organization_id) {
+    dispatchWebhookEvent(trip.organization_id, "trip.approved", {
+      trip_id: tripId,
+      title: trip.title || trip.destination,
+      destination: trip.destination,
+      status: "approved",
+      reviewed_by: reviewerId,
+      reviewed_at: now,
+    }).catch(() => {});
+  }
 
   return { success: true };
 }
@@ -183,6 +207,19 @@ export async function rejectTrip(tripId: string, reviewerId: string, comment: st
       rejection_comment: { old: null, new: comment },
     },
   });
+
+  // Dispatch webhook
+  if (trip.organization_id) {
+    dispatchWebhookEvent(trip.organization_id, "trip.rejected", {
+      trip_id: tripId,
+      title: trip.title || trip.destination,
+      destination: trip.destination,
+      status: "rejected",
+      rejection_comment: comment,
+      reviewed_by: reviewerId,
+      reviewed_at: now,
+    }).catch(() => {});
+  }
 
   return { success: true };
 }

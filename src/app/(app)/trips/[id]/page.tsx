@@ -6,6 +6,7 @@ import { MealDeductionToggles } from "./meal-toggles";
 import { TripReceipts } from "./trip-receipts";
 import { TripExport } from "./trip-export";
 import { TripApprovalActions } from "./trip-approval-actions";
+import { CostCenterBadge } from "./cost-center-badge";
 
 export default async function TripDetailPage({
   params,
@@ -127,6 +128,9 @@ export default async function TripDetailPage({
         </p>
         {trip.purpose && (
           <p className="mt-1 text-sm text-gray-400">{trip.purpose}</p>
+        )}
+        {trip.cost_center_id && (
+          <CostCenterBadge costCenterId={trip.cost_center_id} />
         )}
       </div>
 

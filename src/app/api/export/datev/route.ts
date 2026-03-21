@@ -9,6 +9,7 @@ import {
   DatevExportData,
   DatevReceipt,
 } from "@/lib/export-datev";
+import { dispatchWebhookEvent } from "@/lib/webhooks";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,16 +54,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Load profile, receipts, mileage in parallel
+    // Load profile, receipts, mileage, cost center in parallel
     const [
       { data: profile },
       { data: receipts },
       { data: mileageEntries },
+      costCenterResult,
     ] = await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", trip.user_id).single(),
       supabase.from("receipts").select("*").eq("trip_id", tripId).order("date"),
       supabase.from("mileage").select("*").eq("trip_id", tripId).order("date"),
+      trip.cost_center_id
+        ? supabase.from("cost_centers").select("number").eq("id", trip.cost_center_id).single()
+        : Promise.resolve({ data: null }),
     ]);
+
+    const costCenterNumber = costCenterResult?.data?.number || undefined;
 
     // Calculate per diems
     const allowances = calculatePerDiems(
@@ -93,6 +100,7 @@ export async function POST(request: NextRequest) {
       startDate: trip.start_datetime.split("T")[0],
       endDate: trip.end_datetime.split("T")[0],
       userName: profile?.display_name || "",
+      costCenter: costCenterNumber,
       allowances,
       receipts: datevReceipts,
       mileage: (mileageEntries || []).map((m) => ({
@@ -153,6 +161,16 @@ export async function POST(request: NextRequest) {
       .replace(/[^a-zA-Z0-9äöüÄÖÜß_\- ]/g, "")
       .replace(/\s+/g, "_");
     const zipFilename = `DATEV_${sanitizedTitle}_${exportData.startDate}.zip`;
+
+    // Dispatch webhook
+    if (trip.organization_id) {
+      dispatchWebhookEvent(trip.organization_id, "trip.exported", {
+        trip_id: tripId,
+        title: trip.title || trip.destination,
+        format: "datev",
+        exported_at: new Date().toISOString(),
+      }).catch(() => {});
+    }
 
     return new NextResponse(zipBuffer, {
       headers: {

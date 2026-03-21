@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Spesenluchs API
+  version: 1.0.0
+  description: REST API für Spesenluchs Reisekostenmanagement
+servers:
+  - url: /api/v1
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: 'API Key im Format: sl_live_<32-hex-chars>'
+  schemas:
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        destination:
+          type: string
+        country:
+          type: string
+        purpose:
+          type: string
+          nullable: true
+        start_datetime:
+          type: string
+          format: date-time
+        end_datetime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, confirmed, submitted, approved, rejected]
+        cost_center_id:
+          type: string
+          format: uuid
+          nullable: true
+        organization_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Receipt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+          nullable: true
+        total_amount:
+          type: number
+          nullable: true
+        currency:
+          type: string
+        vendor_name:
+          type: string
+          nullable: true
+        receipt_type:
+          type: string
+        trip_id:
+          type: string
+          format: uuid
+          nullable: true
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            status:
+              type: integer
+paths:
+  /trips:
+    get:
+      summary: Reisen auflisten
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: cost_center_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste der Reisen
+    post:
+      summary: Neue Reise anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [destination, start_datetime, end_datetime, user_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                destination:
+                  type: string
+                country:
+                  type: string
+                  default: DE
+                purpose:
+                  type: string
+                start_datetime:
+                  type: string
+                  format: date-time
+                end_datetime:
+                  type: string
+                  format: date-time
+                cost_center_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Reise erstellt
+  /trips/{id}:
+    get:
+      summary: Reise-Details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reise-Details
+    patch:
+      summary: Reise aktualisieren (nur Entwürfe)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reise aktualisiert
+    delete:
+      summary: Reise löschen (nur Entwürfe)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reise gelöscht
+  /receipts:
+    get:
+      summary: Belege auflisten
+      parameters:
+        - name: trip_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste der Belege
+  /receipts/{id}:
+    get:
+      summary: Beleg-Details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Beleg-Details
+  /mileage:
+    get:
+      summary: Fahrten auflisten
+      responses:
+        '200':
+          description: Liste der Fahrten
+  /cost-centers:
+    get:
+      summary: Kostenstellen auflisten
+      responses:
+        '200':
+          description: Liste der Kostenstellen
+  /organizations:
+    get:
+      summary: Organisationsdetails
+      responses:
+        '200':
+          description: Organisationsdetails
