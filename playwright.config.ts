@@ -39,6 +39,11 @@ export default defineConfig({
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "pwa",
+      testMatch: /pwa\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   webServer: {
     command: "npm run dev",

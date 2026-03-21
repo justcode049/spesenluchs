@@ -18,13 +18,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#2563eb",
 };
 
 export const metadata: Metadata = {
   title: "Spesenluchs - KI-Spesenerfassung",
   description: "Belege fotografieren, KI erledigt den Rest. Reisekosten in unter 60 Sekunden erfassen.",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
   icons: {
     icon: [
       { url: "/favicon.png", sizes: "32x32", type: "image/png" },
