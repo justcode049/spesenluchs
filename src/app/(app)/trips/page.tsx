@@ -38,7 +38,7 @@ export default async function TripsPage() {
         <h1 className="text-xl font-bold text-gray-900">Meine Reisen</h1>
         <Link
           href="/trips/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 min-h-[44px] flex items-center"
         >
           + Neue Reise
         </Link>

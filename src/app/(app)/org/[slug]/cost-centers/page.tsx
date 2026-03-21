@@ -121,13 +121,13 @@ export default function CostCentersPage() {
           <div className="flex gap-2">
             <Link
               href={`/org/${slug}/cost-centers/import`}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 min-h-[44px] flex items-center"
             >
               CSV Import
             </Link>
             <button
               onClick={() => setShowForm(!showForm)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 min-h-[44px]"
             >
               + Neu
             </button>

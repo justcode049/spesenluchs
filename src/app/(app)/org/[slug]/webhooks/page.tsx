@@ -140,7 +140,7 @@ export default function WebhooksPage() {
         <h1 className="text-xl font-bold text-gray-900">Webhooks</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 min-h-[44px]"
         >
           + Neu
         </button>

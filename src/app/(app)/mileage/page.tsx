@@ -18,7 +18,7 @@ export default async function MileagePage() {
         <h1 className="text-xl font-bold text-gray-900">Fahrten</h1>
         <Link
           href="/mileage/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 min-h-[44px] flex items-center"
         >
           + Fahrt erfassen
         </Link>
